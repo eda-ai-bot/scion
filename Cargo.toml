@@ -14,8 +14,8 @@ rust-version = "1.85"
 
 [workspace.dependencies]
 # Internal crates
-scion-types = { path = "crates/scion-types" }
-scion-store = { path = "crates/scion-store" }
+scion-types = { path = "crates/scion-types", version = "0.0.1" }
+scion-store = { path = "crates/scion-store", version = "0.0.1" }
 
 # Hashing / encoding
 blake3 = "1.5"
