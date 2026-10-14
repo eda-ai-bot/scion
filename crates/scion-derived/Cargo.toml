@@ -1,0 +1,22 @@
+[package]
+name = "scion-derived"
+description = "Derived data for Scion: the recursive derivation framework and the data types built on it"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+scion-types.workspace = true
+scion-store.workspace = true
+async-trait.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+bytes.workspace = true
+proptest.workspace = true
+tokio.workspace = true
+
+[lints]
+workspace = true

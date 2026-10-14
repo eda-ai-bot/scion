@@ -1852,6 +1852,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "scion-derived"
+version = "0.0.1"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "proptest",
+ "scion-store",
+ "scion-types",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "scion-store"
 version = "0.0.1"
 dependencies = [
