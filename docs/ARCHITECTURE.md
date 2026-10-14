@@ -74,6 +74,11 @@ resumable, and there is no delta compression or packfile generation anywhere.
 Trees live in the object store rather than the metadata database. This is a deliberate deviation
 from the reference design; `docs/DATA_MODEL.md` explains the trade-off.
 
+The local development stack (`deploy/docker-compose.yml`) uses RustFS rather than MinIO as the
+S3-compatible server because MinIO no longer publishes pullable community container images
+(Docker Hub and quay.io both refuse the pull as of October 2026), while RustFS is Apache-2.0 and
+actively published; the code is backend-agnostic, so any S3-compatible service works.
+
 ### Derived data
 
 A changeset records only what changed, so blame, path history and ancestry questions need

@@ -42,8 +42,8 @@ Full details: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | Workspace, CI, local storage stack, docs | done |
-| 1 | Data model, canonical encoding, golden hashes, store traits + memory impl | in progress |
-| 1 | Postgres metadata store, S3/MinIO object store | planned |
+| 1 | Data model, canonical encoding, golden hashes, store traits + memory impl | done |
+| 1 | Postgres metadata store, S3-compatible object store | done |
 | 2 | Derived data (trees, path history, blame, skip lists), diff / merge-base / rebase / merge | planned |
 | 3 | `scion-server` (gRPC) + `scn` CLI — the MVP | planned |
 | 4 | `scion-cache` and `scion-daemon` tiers, manifest-based seeding | post-MVP |
@@ -59,8 +59,9 @@ Full details: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and
 cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 
-# local storage backends (Postgres + MinIO) for integration tests
+# local storage backends (Postgres + an S3-compatible server) for integration tests
 docker compose -f deploy/docker-compose.yml up -d
+cargo test -p scion-store --features integration
 ```
 
 Golden-hash fixtures live in `crates/scion-types/tests/golden/`. They are the format

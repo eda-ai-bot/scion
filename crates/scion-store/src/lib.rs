@@ -7,14 +7,22 @@
 //!   compare-and-swap each), and derived-data pointers.
 //! * [`ObjectStore`]: immutable, content-addressed blobs and trees.
 //!
-//! Implementations: [`MemoryStore`] (this crate), `postgres` and `s3`
-//! (planned, see the roadmap). Every implementation must pass
-//! [`conformance`].
+//! Implementations:
+//!
+//! | store | metadata | objects |
+//! |---|---|---|
+//! | [`MemoryStore`] | ✓ | ✓ |
+//! | [`PostgresStore`] | ✓ | |
+//! | [`ObjectStorage`] (S3, GCS, Azure, local fs, in-memory via `object_store`) | | ✓ |
+//!
+//! Every implementation must pass [`conformance`].
 
 #![forbid(unsafe_code)]
 
 pub mod conformance;
 mod memory;
+mod object;
+mod postgres;
 mod refs;
 
 use async_trait::async_trait;
@@ -22,6 +30,8 @@ use bytes::Bytes;
 use scion_types::{BlobId, Changeset, ChangesetId, Tree, TreeId};
 
 pub use memory::MemoryStore;
+pub use object::{ObjectStorage, ZSTD_LEVEL};
+pub use postgres::{MIGRATOR, PostgresStore};
 pub use refs::{RefState, is_allowed_ref_name};
 
 /// Error returned by store operations.

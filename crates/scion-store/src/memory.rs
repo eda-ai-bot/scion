@@ -198,4 +198,4 @@ impl ObjectStore for MemoryStore {
     }
 }
 
-crate::conformance_tests!(memory_conformance, MemoryStore::new);
+crate::conformance_tests!(memory_conformance, async { MemoryStore::new() });
