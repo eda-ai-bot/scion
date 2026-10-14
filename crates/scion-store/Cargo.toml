@@ -1,0 +1,20 @@
+[package]
+name = "scion-store"
+description = "Storage traits for Scion (metadata + object store) and the in-memory implementation"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+scion-types.workspace = true
+async-trait.workspace = true
+bytes.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true
+
+[lints]
+workspace = true

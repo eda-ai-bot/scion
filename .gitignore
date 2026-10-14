@@ -1,0 +1,8 @@
+/target
+**/*.rs.bk
+*.profraw
+.DS_Store
+.env
+.scn/
+/deploy/data/
+/.claude/worktrees/
