@@ -28,7 +28,8 @@ jobs:
       - name: clippy
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
       - name: test
-        run: cargo test --workspace --all-features
+        # `integration` needs live services; the integration job below runs it.
+        run: cargo test --workspace
       - name: doc
         run: cargo doc --workspace --no-deps
         env:
