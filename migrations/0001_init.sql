@@ -28,6 +28,7 @@ CREATE TABLE changesets (
     message         TEXT   NOT NULL,
     signature       BYTEA,                    -- detached; NOT part of the hash
     generation      BIGINT NOT NULL,          -- max(parent.generation) + 1; roots are 0
+    canonical       BYTEA  NOT NULL,          -- canonical encoding; id = blake3(canonical)
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (repo, id)
 );

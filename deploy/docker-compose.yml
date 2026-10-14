@@ -1,7 +1,8 @@
-# Local development stack: metadata DB (Postgres) + object store (MinIO, S3-compatible).
+# Local development stack: metadata DB (Postgres) + object store (RustFS, S3-compatible).
 #
 # Usage:
 #   docker compose -f deploy/docker-compose.yml up -d
+#   cargo test -p scion-store --features integration
 #
 # scion-server / scion-cache services are added in Phase 3 / Phase 4 of the roadmap.
 # Until then this file only provides the storage backends used by integration tests.
@@ -17,42 +18,49 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ../migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U scion -d scion"]
       interval: 5s
       timeout: 3s
       retries: 10
 
-  minio:
-    image: minio/minio:latest
-    command: server /data --console-address ":9001"
+  # Any S3-compatible server works; RustFS is small and on Docker Hub.
+  rustfs:
+    image: rustfs/rustfs:latest
     environment:
-      MINIO_ROOT_USER: scion
-      MINIO_ROOT_PASSWORD: scionscion
+      RUSTFS_ACCESS_KEY: scion
+      RUSTFS_SECRET_KEY: scionscion
+      RUSTFS_VOLUMES: /data
+      RUSTFS_ADDRESS: ":9000"
     ports:
       - "9000:9000"
-      - "9001:9001"
     volumes:
-      - miniodata:/data
+      - objectdata:/data
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/health || exit 1"]
       interval: 5s
       timeout: 3s
-      retries: 10
+      retries: 20
 
   # One-shot: create the object bucket.
-  minio-init:
-    image: minio/mc:latest
+  bucket-init:
+    image: amazon/aws-cli:latest
     depends_on:
-      minio:
-        condition: service_healthy
+      rustfs:
+        condition: service_started
+    environment:
+      AWS_ACCESS_KEY_ID: scion
+      AWS_SECRET_ACCESS_KEY: scionscion
+      AWS_DEFAULT_REGION: us-east-1
     entrypoint: >
       /bin/sh -c "
-        mc alias set local http://minio:9000 scion scionscion &&
-        mc mb --ignore-existing local/scion-objects
+        for i in $(seq 1 30); do
+          aws --endpoint-url http://rustfs:9000 s3 ls >/dev/null 2>&1 && break; sleep 1;
+        done;
+        aws --endpoint-url http://rustfs:9000 s3 mb s3://scion-objects 2>/dev/null || true;
+        aws --endpoint-url http://rustfs:9000 s3 ls
       "
 
 volumes:
   pgdata:
-  miniodata:
+  objectdata:

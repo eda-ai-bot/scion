@@ -184,7 +184,12 @@ pub async fn objects<S: ObjectStore>(s: &S) {
 }
 
 /// Instantiate the conformance suite as `#[tokio::test]`s in a module named
-/// `$mod`, constructing a fresh store per test with `$ctor`.
+/// `$mod`. `$ctor` is an expression evaluating to a future that yields a
+/// fresh, empty store; it is evaluated once per test.
+///
+/// Use [`metadata_conformance_tests!`](crate::metadata_conformance_tests) or
+/// [`object_conformance_tests!`](crate::object_conformance_tests) for a store
+/// that implements only one of the two traits.
 #[macro_export]
 macro_rules! conformance_tests {
     ($mod:ident, $ctor:expr) => {
@@ -195,19 +200,61 @@ macro_rules! conformance_tests {
 
             #[tokio::test]
             async fn changesets() {
-                $crate::conformance::changesets(&($ctor)()).await;
+                $crate::conformance::changesets(&$ctor.await).await;
             }
             #[tokio::test]
             async fn refs() {
-                $crate::conformance::refs(&($ctor)()).await;
+                $crate::conformance::refs(&$ctor.await).await;
             }
             #[tokio::test]
             async fn derived() {
-                $crate::conformance::derived(&($ctor)()).await;
+                $crate::conformance::derived(&$ctor.await).await;
             }
             #[tokio::test]
             async fn objects() {
-                $crate::conformance::objects(&($ctor)()).await;
+                $crate::conformance::objects(&$ctor.await).await;
+            }
+        }
+    };
+}
+
+/// [`MetadataStore`] half of [`conformance_tests!`](crate::conformance_tests).
+#[macro_export]
+macro_rules! metadata_conformance_tests {
+    ($mod:ident, $ctor:expr) => {
+        #[cfg(test)]
+        mod $mod {
+            #[allow(unused_imports)]
+            use super::*;
+
+            #[tokio::test]
+            async fn changesets() {
+                $crate::conformance::changesets(&$ctor.await).await;
+            }
+            #[tokio::test]
+            async fn refs() {
+                $crate::conformance::refs(&$ctor.await).await;
+            }
+            #[tokio::test]
+            async fn derived() {
+                $crate::conformance::derived(&$ctor.await).await;
+            }
+        }
+    };
+}
+
+/// [`ObjectStore`] half of [`conformance_tests!`](crate::conformance_tests).
+#[macro_export]
+macro_rules! object_conformance_tests {
+    ($mod:ident, $ctor:expr) => {
+        #[cfg(test)]
+        mod $mod {
+            #[allow(unused_imports)]
+            use super::*;
+
+            #[tokio::test]
+            async fn objects() {
+                $crate::conformance::objects(&$ctor.await).await;
             }
         }
     };
