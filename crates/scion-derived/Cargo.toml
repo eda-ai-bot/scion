@@ -13,6 +13,7 @@ scion-store.workspace = true
 async-trait.workspace = true
 bytes.workspace = true
 thiserror.workspace = true
+diffy = "0.5.2"
 
 [dev-dependencies]
 proptest.workspace = true

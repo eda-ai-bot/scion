@@ -12,6 +12,7 @@
 
 #![forbid(unsafe_code)]
 
+mod blame;
 mod deriver;
 mod path_history;
 mod root_tree;
@@ -21,6 +22,7 @@ mod test_util;
 
 use scion_types::{BlobId, ChangesetId, TreeId};
 
+pub use blame::{Blame, BlameNode, FileBlame};
 pub use deriver::{Derivable, Deriver};
 pub use path_history::{HistoryEntry, HistoryNode, PathHistory};
 pub use root_tree::RootTree;
