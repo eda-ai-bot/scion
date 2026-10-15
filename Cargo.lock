@@ -1873,8 +1873,10 @@ dependencies = [
 name = "scion-core"
 version = "0.0.1"
 dependencies = [
+ "bytes",
  "proptest",
  "scion-derived",
+ "scion-diff3",
  "scion-store",
  "scion-types",
  "tokio",

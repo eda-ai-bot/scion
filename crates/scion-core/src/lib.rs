@@ -17,6 +17,10 @@
 
 #![forbid(unsafe_code)]
 
+mod merge;
+
+pub use merge::{Conflict, Side, ThreeWay, merge, rebase};
+
 use scion_derived::{Deriver, HistoryEntry, PathHistory, RootTree, SkipList};
 use scion_store::ObjectStore;
 use scion_types::{
