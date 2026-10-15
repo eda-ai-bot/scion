@@ -3,6 +3,7 @@ resolver = "3"
 members = [
     "crates/scion-types",
     "crates/scion-store",
+    "crates/scion-derived",
 ]
 
 [workspace.package]
@@ -16,6 +17,7 @@ rust-version = "1.85"
 # Internal crates
 scion-types = { path = "crates/scion-types", version = "0.0.1" }
 scion-store = { path = "crates/scion-store", version = "0.0.1" }
+scion-derived = { path = "crates/scion-derived", version = "0.0.1" }
 
 # Hashing / encoding
 blake3 = "1.5"
