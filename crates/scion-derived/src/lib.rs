@@ -17,8 +17,9 @@ mod deriver;
 mod path_history;
 mod root_tree;
 mod skip_list;
-#[cfg(test)]
-mod test_util;
+#[cfg(any(test, feature = "test-util"))]
+#[doc(hidden)]
+pub mod test_util;
 
 use scion_types::{BlobId, ChangesetId, TreeId};
 

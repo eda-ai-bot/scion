@@ -15,9 +15,17 @@ bytes.workspace = true
 thiserror.workspace = true
 diffy = "0.5.2"
 
+proptest = { workspace = true, optional = true }
+
 [dev-dependencies]
 proptest.workspace = true
 tokio.workspace = true
+
+[features]
+default = []
+# Exposes `scion_derived::test_util` (naive materialisation, builders,
+# counting stores, proptest generators) to other crates' tests.
+test-util = ["dep:proptest"]
 
 [lints]
 workspace = true

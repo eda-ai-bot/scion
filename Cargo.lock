@@ -1870,6 +1870,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "scion-core"
+version = "0.0.1"
+dependencies = [
+ "proptest",
+ "scion-derived",
+ "scion-store",
+ "scion-types",
+ "tokio",
+]
+
+[[package]]
 name = "scion-derived"
 version = "0.0.1"
 dependencies = [
