@@ -1,0 +1,17 @@
+[package]
+name = "scion-diff3"
+description = "Three-way line merge for Scion, over diffy"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+diffy.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+
+[lints]
+workspace = true
