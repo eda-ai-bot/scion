@@ -5,6 +5,7 @@ members = [
     "crates/scion-store",
     "crates/scion-derived",
     "crates/scion-core",
+    "crates/scion-diff3",
 ]
 
 [workspace.package]
@@ -20,6 +21,10 @@ scion-types = { path = "crates/scion-types", version = "0.0.1" }
 scion-store = { path = "crates/scion-store", version = "0.0.1" }
 scion-derived = { path = "crates/scion-derived", version = "0.0.1" }
 scion-core = { path = "crates/scion-core", version = "0.0.1" }
+scion-diff3 = { path = "crates/scion-diff3", version = "0.0.1" }
+
+# Diff / merge
+diffy = "0.5.2"
 
 # Hashing / encoding
 blake3 = "1.5"
