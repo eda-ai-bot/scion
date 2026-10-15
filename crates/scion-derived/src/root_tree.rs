@@ -40,6 +40,34 @@ impl Derivable for RootTree {
     }
 }
 
+impl RootTree {
+    /// The tree entry at `path`, or `None` if the path does not exist.
+    pub async fn lookup(
+        &self,
+        objects: &dyn ObjectStore,
+        path: &scion_types::RepoPath,
+    ) -> Result<Option<TreeEntry>> {
+        let mut tree = objects
+            .get_tree(self.0)
+            .await?
+            .ok_or(DeriveError::MissingTree(self.0))?;
+        let components: Vec<PathComponent> = path.components().collect();
+        let (last, dirs) = components.split_last().expect("paths are non-empty");
+        for component in dirs {
+            match tree.entries.get(component) {
+                Some(TreeEntry::Tree { id }) => {
+                    tree = objects
+                        .get_tree(*id)
+                        .await?
+                        .ok_or(DeriveError::MissingTree(*id))?;
+                }
+                _ => return Ok(None),
+            }
+        }
+        Ok(tree.entries.get(last).cloned())
+    }
+}
+
 /// What a change does to the entry at a path.
 enum Leaf {
     Delete,
