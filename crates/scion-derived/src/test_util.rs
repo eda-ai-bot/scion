@@ -68,10 +68,12 @@ pub fn tracked(content: &[u8]) -> FileChange {
 }
 
 /// Counts writes so tests can bound the number of rewritten nodes.
+#[derive(Debug)]
 pub struct Counting<'a> {
     pub inner: &'a MemoryStore,
     pub tree_puts: AtomicUsize,
     pub blob_puts: AtomicUsize,
+    pub tree_gets: AtomicUsize,
 }
 
 impl<'a> Counting<'a> {
@@ -80,6 +82,7 @@ impl<'a> Counting<'a> {
             inner,
             tree_puts: AtomicUsize::new(0),
             blob_puts: AtomicUsize::new(0),
+            tree_gets: AtomicUsize::new(0),
         }
     }
     pub fn tree_puts(&self) -> usize {
@@ -87,6 +90,9 @@ impl<'a> Counting<'a> {
     }
     pub fn blob_puts(&self) -> usize {
         self.blob_puts.load(Ordering::Relaxed)
+    }
+    pub fn tree_gets(&self) -> usize {
+        self.tree_gets.load(Ordering::Relaxed)
     }
 }
 
@@ -107,6 +113,7 @@ impl ObjectStore for Counting<'_> {
         self.inner.put_tree(tree).await
     }
     async fn get_tree(&self, id: TreeId) -> scion_store::Result<Option<Tree>> {
+        self.tree_gets.fetch_add(1, Ordering::Relaxed);
         self.inner.get_tree(id).await
     }
 }
@@ -128,6 +135,7 @@ pub fn arb_changes() -> impl Strategy<Value = BTreeMap<RepoPath, FileChange>> {
 }
 
 /// Counts metadata reads so tests can bound the work an ancestry query does.
+#[derive(Debug)]
 pub struct CountingMeta<'a> {
     pub inner: &'a MemoryStore,
     pub derived_reads: AtomicUsize,

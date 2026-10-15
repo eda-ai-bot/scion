@@ -4,6 +4,7 @@ members = [
     "crates/scion-types",
     "crates/scion-store",
     "crates/scion-derived",
+    "crates/scion-core",
 ]
 
 [workspace.package]
@@ -18,6 +19,7 @@ rust-version = "1.85"
 scion-types = { path = "crates/scion-types", version = "0.0.1" }
 scion-store = { path = "crates/scion-store", version = "0.0.1" }
 scion-derived = { path = "crates/scion-derived", version = "0.0.1" }
+scion-core = { path = "crates/scion-core", version = "0.0.1" }
 
 # Hashing / encoding
 blake3 = "1.5"
