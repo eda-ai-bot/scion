@@ -13,11 +13,15 @@
 #![forbid(unsafe_code)]
 
 mod deriver;
+mod path_history;
 mod root_tree;
+#[cfg(test)]
+mod test_util;
 
-use scion_types::{ChangesetId, TreeId};
+use scion_types::{BlobId, ChangesetId, TreeId};
 
 pub use deriver::{Derivable, Deriver};
+pub use path_history::{HistoryEntry, HistoryNode, PathHistory};
 pub use root_tree::RootTree;
 
 /// Error produced while deriving.
@@ -27,6 +31,10 @@ pub enum DeriveError {
     MissingChangeset(ChangesetId),
     #[error("tree {0} not found in the object store")]
     MissingTree(TreeId),
+    #[error("derived object {0} not found in the object store")]
+    MissingObject(BlobId),
+    #[error("derived object {0} is corrupt")]
+    CorruptObject(BlobId),
     #[error("stored {ty} for {cs} is corrupt")]
     CorruptPointer { ty: &'static str, cs: ChangesetId },
     #[error(transparent)]

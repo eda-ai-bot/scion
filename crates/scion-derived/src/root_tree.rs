@@ -153,40 +153,15 @@ async fn apply_node(
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeMap;
-    use std::sync::atomic::{AtomicUsize, Ordering};
 
-    use bytes::Bytes;
     use proptest::prelude::*;
     use scion_store::{MemoryStore, MetadataStore, ObjectStore};
-    use scion_types::{ChangesetId, Identity, RepoPath, Timestamp};
+    use scion_types::{ChangesetId, RepoPath};
 
     use super::*;
-
-    type Flat = BTreeMap<RepoPath, (BlobId, FileType, u64)>;
+    use crate::test_util::{Counting, Flat, REPO, arb_changes, changeset, materialize, tracked};
 
     // ---- naive reference ------------------------------------------------
-
-    /// Flatten a tree into `path -> file`.
-    async fn materialize(objects: &dyn ObjectStore, root: TreeId) -> Flat {
-        let mut out = Flat::new();
-        let mut stack = vec![(None::<RepoPath>, root)];
-        while let Some((prefix, id)) = stack.pop() {
-            let tree = objects.get_tree(id).await.unwrap().expect("tree exists");
-            for (name, entry) in tree.entries {
-                let path = match &prefix {
-                    Some(p) => p.join(&name),
-                    None => RepoPath::new(name.as_str()).unwrap(),
-                };
-                match entry {
-                    TreeEntry::Blob { id, kind, size } => {
-                        out.insert(path, (id, kind, size));
-                    }
-                    TreeEntry::Tree { id } => stack.push((Some(path), id)),
-                }
-            }
-        }
-        out
-    }
 
     /// Apply changes to a flat map.
     fn apply_flat(mut flat: Flat, changes: &BTreeMap<RepoPath, FileChange>) -> Flat {
@@ -252,63 +227,6 @@ mod tests {
             dir.files.insert(last.clone(), *file);
         }
         write(objects, &root).await
-    }
-
-    // ---- helpers --------------------------------------------------------
-
-    const REPO: &str = "t";
-
-    fn changeset(
-        parents: Vec<ChangesetId>,
-        changes: BTreeMap<RepoPath, FileChange>,
-        msg: &str,
-    ) -> Changeset {
-        Changeset {
-            repo: REPO.into(),
-            parents,
-            author: Identity::new("a", "a@x"),
-            author_date: Timestamp::new(0, 0),
-            committer: None,
-            committer_date: None,
-            message: msg.into(),
-            file_changes: changes,
-            extra: BTreeMap::new(),
-        }
-    }
-
-    fn tracked(content: &[u8]) -> FileChange {
-        FileChange::Tracked {
-            content: BlobId::hash(content),
-            kind: FileType::Regular,
-            size: u64::try_from(content.len()).unwrap(),
-            copy_from: None,
-        }
-    }
-
-    /// Counts `put_tree` calls so tests can bound the number of rewritten nodes.
-    struct Counting<'a> {
-        inner: &'a MemoryStore,
-        puts: AtomicUsize,
-    }
-
-    #[async_trait]
-    impl ObjectStore for Counting<'_> {
-        async fn put_blob(&self, bytes: Bytes) -> scion_store::Result<BlobId> {
-            self.inner.put_blob(bytes).await
-        }
-        async fn get_blob(&self, id: BlobId) -> scion_store::Result<Option<Bytes>> {
-            self.inner.get_blob(id).await
-        }
-        async fn has_blobs(&self, ids: &[BlobId]) -> scion_store::Result<Vec<bool>> {
-            self.inner.has_blobs(ids).await
-        }
-        async fn put_tree(&self, tree: &Tree) -> scion_store::Result<TreeId> {
-            self.puts.fetch_add(1, Ordering::Relaxed);
-            self.inner.put_tree(tree).await
-        }
-        async fn get_tree(&self, id: TreeId) -> scion_store::Result<Option<Tree>> {
-            self.inner.get_tree(id).await
-        }
     }
 
     // ---- tests ----------------------------------------------------------
@@ -390,15 +308,12 @@ mod tests {
             .await
             .unwrap();
 
-        let counting = Counting {
-            inner: &store,
-            puts: AtomicUsize::new(0),
-        };
+        let counting = Counting::new(&store);
         Deriver::new(REPO, &store, &counting)
             .derive::<RootTree>(child)
             .await
             .unwrap();
-        let puts = counting.puts.load(Ordering::Relaxed);
+        let puts = counting.tree_puts();
         assert_eq!(
             puts,
             DEPTH + 1,
@@ -431,14 +346,11 @@ mod tests {
             .await
             .unwrap();
 
-        let counting = Counting {
-            inner: &store,
-            puts: AtomicUsize::new(0),
-        };
+        let counting = Counting::new(&store);
         let d = Deriver::new(REPO, &store, &counting);
         let RootTree(t) = d.derive::<RootTree>(merge).await.unwrap();
         // root, left, right, merge: one root-level tree each.
-        assert_eq!(counting.puts.load(Ordering::Relaxed), 4);
+        assert_eq!(counting.tree_puts(), 4);
         // Merge follows the first parent: has x and l, not r.
         let flat = materialize(&store, t).await;
         assert_eq!(
@@ -452,7 +364,7 @@ mod tests {
         }
         let RootTree(t2) = d.derive::<RootTree>(merge).await.unwrap();
         assert_eq!(t2, t);
-        assert_eq!(counting.puts.load(Ordering::Relaxed), 4);
+        assert_eq!(counting.tree_puts(), 4);
     }
 
     #[tokio::test]
@@ -467,22 +379,6 @@ mod tests {
     }
 
     // ---- property test: incremental derivation ≡ from-scratch build ------
-
-    fn arb_path() -> impl Strategy<Value = RepoPath> {
-        // Small alphabet so paths collide and nest (file/dir replacement happens).
-        prop::collection::vec("[ab][0-2]", 1..4).prop_map(|cs| RepoPath::new(cs.join("/")).unwrap())
-    }
-
-    fn arb_change() -> impl Strategy<Value = FileChange> {
-        prop_oneof![
-            2 => any::<u8>().prop_map(|b| tracked(&[b])),
-            1 => Just(FileChange::Deleted),
-        ]
-    }
-
-    fn arb_changes() -> impl Strategy<Value = BTreeMap<RepoPath, FileChange>> {
-        prop::collection::btree_map(arb_path(), arb_change(), 0..6)
-    }
 
     proptest! {
         #![proptest_config(ProptestConfig::with_cases(64))]
