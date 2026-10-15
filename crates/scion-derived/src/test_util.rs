@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use async_trait::async_trait;
 use bytes::Bytes;
 use proptest::prelude::*;
-use scion_store::{MemoryStore, ObjectStore};
+use scion_store::{MemoryStore, MetadataStore, ObjectStore, RefState};
 use scion_types::{
     BlobId, Changeset, ChangesetId, FileChange, FileType, Identity, RepoPath, Timestamp, Tree,
     TreeEntry, TreeId,
@@ -125,4 +125,90 @@ pub fn arb_change() -> impl Strategy<Value = FileChange> {
 
 pub fn arb_changes() -> impl Strategy<Value = BTreeMap<RepoPath, FileChange>> {
     prop::collection::btree_map(arb_path(), arb_change(), 0..6)
+}
+
+/// Counts metadata reads so tests can bound the work an ancestry query does.
+pub struct CountingMeta<'a> {
+    pub inner: &'a MemoryStore,
+    pub derived_reads: AtomicUsize,
+    pub changeset_reads: AtomicUsize,
+}
+
+impl<'a> CountingMeta<'a> {
+    pub fn new(inner: &'a MemoryStore) -> Self {
+        Self {
+            inner,
+            derived_reads: AtomicUsize::new(0),
+            changeset_reads: AtomicUsize::new(0),
+        }
+    }
+    pub fn derived_reads(&self) -> usize {
+        self.derived_reads.load(Ordering::Relaxed)
+    }
+    pub fn changeset_reads(&self) -> usize {
+        self.changeset_reads.load(Ordering::Relaxed)
+    }
+}
+
+#[async_trait]
+impl MetadataStore for CountingMeta<'_> {
+    async fn put_changeset(&self, cs: &Changeset) -> scion_store::Result<ChangesetId> {
+        self.inner.put_changeset(cs).await
+    }
+    async fn get_changeset(
+        &self,
+        repo: &str,
+        id: ChangesetId,
+    ) -> scion_store::Result<Option<Changeset>> {
+        self.changeset_reads.fetch_add(1, Ordering::Relaxed);
+        self.inner.get_changeset(repo, id).await
+    }
+    async fn generation(&self, repo: &str, id: ChangesetId) -> scion_store::Result<Option<u64>> {
+        self.inner.generation(repo, id).await
+    }
+    async fn create_ref(
+        &self,
+        repo: &str,
+        name: &str,
+        target: ChangesetId,
+    ) -> scion_store::Result<RefState> {
+        self.inner.create_ref(repo, name, target).await
+    }
+    async fn get_ref(&self, repo: &str, name: &str) -> scion_store::Result<Option<RefState>> {
+        self.inner.get_ref(repo, name).await
+    }
+    async fn move_ref(
+        &self,
+        repo: &str,
+        name: &str,
+        expected_version: u64,
+        new_target: ChangesetId,
+    ) -> scion_store::Result<RefState> {
+        self.inner
+            .move_ref(repo, name, expected_version, new_target)
+            .await
+    }
+    async fn list_refs(&self, repo: &str) -> scion_store::Result<Vec<(String, RefState)>> {
+        self.inner.list_refs(repo).await
+    }
+    async fn put_derived(
+        &self,
+        repo: &str,
+        ty: &str,
+        version: u32,
+        cs: ChangesetId,
+        pointer: Vec<u8>,
+    ) -> scion_store::Result<()> {
+        self.inner.put_derived(repo, ty, version, cs, pointer).await
+    }
+    async fn get_derived(
+        &self,
+        repo: &str,
+        ty: &str,
+        version: u32,
+        cs: ChangesetId,
+    ) -> scion_store::Result<Option<Vec<u8>>> {
+        self.derived_reads.fetch_add(1, Ordering::Relaxed);
+        self.inner.get_derived(repo, ty, version, cs).await
+    }
 }

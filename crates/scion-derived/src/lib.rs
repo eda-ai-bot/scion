@@ -15,6 +15,7 @@
 mod deriver;
 mod path_history;
 mod root_tree;
+mod skip_list;
 #[cfg(test)]
 mod test_util;
 
@@ -23,6 +24,7 @@ use scion_types::{BlobId, ChangesetId, TreeId};
 pub use deriver::{Derivable, Deriver};
 pub use path_history::{HistoryEntry, HistoryNode, PathHistory};
 pub use root_tree::RootTree;
+pub use skip_list::SkipList;
 
 /// Error produced while deriving.
 #[derive(Debug, thiserror::Error)]
