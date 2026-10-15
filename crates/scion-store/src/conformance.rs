@@ -151,6 +151,28 @@ pub async fn derived<S: MetadataStore>(s: &S) {
     );
 }
 
+/// Ingest checkpoints are per repository and idempotent: the first record of
+/// a git sha wins.
+pub async fn checkpoints<S: MetadataStore>(s: &S) {
+    assert_eq!(s.ingest_checkpoints(REPO).await.unwrap(), vec![]);
+    let (a, b) = (
+        ChangesetId::from_bytes([1; 32]),
+        ChangesetId::from_bytes([2; 32]),
+    );
+    s.put_ingest_checkpoint(REPO, &[0xaa; 20], a).await.unwrap();
+    s.put_ingest_checkpoint(REPO, &[0xbb; 20], b).await.unwrap();
+    s.put_ingest_checkpoint(REPO, &[0xaa; 20], b).await.unwrap();
+    assert_eq!(
+        s.ingest_checkpoints(REPO).await.unwrap(),
+        vec![(vec![0xaa; 20], a), (vec![0xbb; 20], b)]
+    );
+    assert_eq!(
+        s.ingest_checkpoints("other").await.unwrap(),
+        vec![],
+        "scoped by repo"
+    );
+}
+
 /// Blobs and trees are content-addressed and idempotent.
 pub async fn objects<S: ObjectStore>(s: &S) {
     let data = Bytes::from_static(b"hello, scion");
@@ -211,6 +233,10 @@ macro_rules! conformance_tests {
                 $crate::conformance::derived(&$ctor.await).await;
             }
             #[tokio::test]
+            async fn checkpoints() {
+                $crate::conformance::checkpoints(&$ctor.await).await;
+            }
+            #[tokio::test]
             async fn objects() {
                 $crate::conformance::objects(&$ctor.await).await;
             }
@@ -238,6 +264,10 @@ macro_rules! metadata_conformance_tests {
             #[tokio::test]
             async fn derived() {
                 $crate::conformance::derived(&$ctor.await).await;
+            }
+            #[tokio::test]
+            async fn checkpoints() {
+                $crate::conformance::checkpoints(&$ctor.await).await;
             }
         }
     };
