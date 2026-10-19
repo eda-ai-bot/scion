@@ -231,10 +231,14 @@ and one interceptor in `scion-server` refuses a missing, altered, foreign or exp
 with UNAUTHENTICATED; health checks need none. A token is a principal and an expiry written
 with the canonical primitives and signed with a keyed BLAKE3 MAC under the 32-byte server key
 (`SCION_TOKEN_KEY`, without which the server does not start), so verifying one needs no
-table. The `grants` table (`repo`, `principal`, `path_prefix`, `role` of `reader`, `writer`
-or `admin`; server-wide grants live under the reserved repository `*`) exists but is not
-consulted yet: today any valid token can do anything, so run a server only where every token
-holder is trusted.
+table. Each RPC then needs a role in the repository it names, from the `grants` table (`repo`,
+`principal`, `path_prefix`, `role`; server-wide grants live under the reserved repository
+`*`): `reader` for reads and the object plane (whose requests name a repository too, although
+objects are shared), `writer` for `CreateChangeset`, `Rebase`, `Merge`, `Revert` and change
+requests, `admin` for `MoveRef`, and a server-wide `admin` for `InitRepo`, which makes its
+caller the new repository's admin. A missing role is PERMISSION_DENIED, also for a repository
+that does not exist. Every grant of a repository counts whatever its `path_prefix` for now;
+directory scope is still to come.
 
 Until `scn login` exists, the operator bootstraps access with `scion-server` subcommands that
 work on the stores directly, with no server running: `grant <repo|*> <principal> <role>
