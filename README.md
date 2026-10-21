@@ -32,8 +32,8 @@ centralized design with thin clients and tiered object caches is a better fit.
 
 Scion is that design, built on boring infrastructure:
 
-- **Postgres and S3, nothing else.** Metadata (changesets, refs, derived-data pointers) lives in
-  Postgres; blobs and trees live in any S3-compatible object store. No packfiles, no repository
+- **Postgres and S3, nothing else.** Metadata (changesets, refs, derived data, trees) lives in
+  Postgres; blobs live in any S3-compatible object store. No packfiles, no repository
   maintenance, no materialized copy of the repository on any server.
 - **A commit costs what it changes.** A changeset records only the files it changed against its
   first parent. Directory trees, path history, blame and the ancestry index are *derived data*,
@@ -299,11 +299,11 @@ request is a cacheable GET and no tier needs repository maintenance.
   <img src="docs/assets/commit-cost.svg" width="800" alt="Editing one file in the 2,500-file test tree rewrites the 5 directories on its path; the other 7,546 tree nodes keep their ids">
 </p>
 
-Where Scion deliberately departs from the design it was inspired by: trees live in the object
-store rather than the metadata database
-([why](docs/DATA_MODEL.md#deviation-trees-in-the-object-store)); hashing uses Scion's own
+Where Scion deliberately departs from the design it was inspired by: hashing uses Scion's own
 canonical BLAKE3 encoding, never a protobuf encoding; and the server refuses any ref other than
-`main` and `release/*`.
+`main` and `release/*`. Trees, which first lived in the object store, sit in the metadata
+database like the reference design's since Phase 10.3
+([why](docs/DATA_MODEL.md#trees-in-the-metadata-database)).
 
 Full details: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (components, planes, tiering,
 ingestion), [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md) (the changeset, the canonical encoding,
@@ -335,25 +335,25 @@ from the first start to the last finish, and the p50 and p99 of the writers' own
 <!-- bench-real:start (scripts/render-assets.py writes this table) -->
 | Workload | git, ms | scion, ms | scion / git |
 | --- | ---: | ---: | ---: |
-| import, cold | 1,668 | 25,258 | 15.1× |
-| import, warm | 1,523 | 8,682 | 5.7× |
-| clone | 1,953 | 1,536 | 0.79× |
-| sparse clone | 612 | 122 | 0.20× |
-| status | 214 | 8 | 0.04× |
-| path log, cold | 24 | 168 | 7.0× |
-| path log, warm | 29 | 25 | 0.86× |
-| blame, cold | 53 | 239 | 4.5× |
-| blame, warm | 56 | 13 | 0.23× |
-| path log, server warm, client cold | 24 | 26 | 1.1× |
-| blame, server warm, client cold | 59 | 13 | 0.22× |
-| commit + land | 46 | 63 | 1.4× |
-| land, 16 writers at once | 3,536 | 643 | 0.18× |
-| land, 16 writers: p50 per land | 2,487 | 432 | 0.17× |
-| land, 16 writers: p99 per land | 3,522 | 626 | 0.18× |
+| import, cold | 1,354 | 14,138 | 10.4× |
+| import, warm | 1,345 | 5,722 | 4.3× |
+| clone | 2,060 | 1,558 | 0.76× |
+| sparse clone | 591 | 121 | 0.20× |
+| status | 179 | 8 | 0.04× |
+| path log, cold | 25 | 145 | 5.8× |
+| path log, warm | 23 | 27 | 1.2× |
+| blame, cold | 58 | 227 | 3.9× |
+| blame, warm | 58 | 12 | 0.21× |
+| path log, server warm, client cold | 22 | 23 | 1.0× |
+| blame, server warm, client cold | 50 | 13 | 0.26× |
+| commit + land | 42 | 54 | 1.3× |
+| land, 16 writers at once | 3,416 | 432 | 0.13× |
+| land, 16 writers: p50 per land | 2,259 | 317 | 0.14× |
+| land, 16 writers: p99 per land | 3,406 | 415 | 0.12× |
 
 Repository: library/ of the public repository pinned in scripts/bench-real, first-parent commits since 2026-01-01 up to 91e9c2688eb23af9a5b77f056156e756550c7c99 (600 commits, 2330 files at the tip).  
 Machine: Linux 6.18.44-fc-v140 x86_64; Intel(R) Xeon(R) Processor @ 2.10GHz; 4 cpus; 15 GiB.  
-Run: git version 2.43.0; scion 0d70d54; 3 runs; 2026-10-21T07:30:02Z.  
+Run: git version 2.43.0; scion afe5885; 3 runs; 2026-10-21T21:34:55Z.  
 Other implementations of the design: not measured in this run.
 <!-- bench-real:end -->
 
