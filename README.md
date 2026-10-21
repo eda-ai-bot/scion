@@ -323,9 +323,9 @@ Read these numbers with their limits:
 ## What's next
 
 Access control is in place: server-signed tokens, repository roles, directory-scoped grants,
-GitHub sign-in and `scn access` for repository admins. Next come fuzzing of every boundary that
-reads untrusted bytes and a seeded, hermetic simulation of many clients landing, merging and
-reverting while the server restarts. In parallel, a performance pass aims at every benchmark row being a multiple faster than git: trees and history pages move into the metadata
+GitHub sign-in and `scn access` for repository admins, and a seeded, hermetic simulation runs
+many clients landing, merging and reverting while the server fails and restarts. Next comes
+fuzzing of every boundary that reads untrusted bytes. In parallel, a performance pass aims at every benchmark row being a multiple faster than git: trees and history pages move into the metadata
 database as the reference design keeps them, the object plane gains streaming batch requests, and
 landing becomes one round trip. After that, in order: a web interface (repository, history, blame
 and change-request pages with GitHub login), an HTTP/JSON API and an MCP server so coding agents
@@ -344,6 +344,7 @@ acceptance criteria per step, is [`docs/ROADMAP.md`](docs/ROADMAP.md).
 | Network | `scion-proto` (gRPC schema), `scion-server` (control plane, object origin, land worker) |
 | Client | `scion-client`: `.scn/` layout, index, sparse profile, clone, checkout, commit and update; `scn`: the CLI |
 | Import | `scion-ingest`: git → Scion importer (`import`, `verify`), checkpoints and incremental sync |
+| Testing | `scion-sim`: seeded, hermetic simulation of the server with faults and restarts |
 
 ## Development
 
@@ -351,7 +352,8 @@ acceptance criteria per step, is [`docs/ROADMAP.md`](docs/ROADMAP.md).
 # toolchain is pinned by rust-toolchain.toml; scion-proto also needs `protoc` on PATH
 # scion-ingest's tests also need `git` on PATH (apt-get install git / brew install git)
 # scripts/bench-real also needs openssl and curl (apt-get install openssl curl / brew install openssl curl)
-cargo test --workspace
+cargo test --workspace                     # includes 200 seeds of scion-sim
+SCION_SIM_SEED=42 cargo test -p scion-sim --test seeds   # replay one simulation seed
 cargo clippy --workspace --all-targets -- -D warnings
 
 # local storage backends (Postgres + an S3-compatible server) for integration tests; the
