@@ -182,7 +182,24 @@ impl Changeset {
 
 #[cfg(test)]
 mod tests {
-    use super::Timestamp;
+    use super::{Changeset, Timestamp};
+
+    #[test]
+    fn first_parent_is_none_for_a_root_changeset() {
+        assert_eq!(Changeset::repository_root("demo").first_parent(), None);
+    }
+
+    #[test]
+    fn first_parent_is_the_first_of_two_parents() {
+        let first = Changeset::repository_root("first").id();
+        let second = Changeset::repository_root("second").id();
+        let merge = Changeset {
+            parents: vec![first, second],
+            ..Changeset::repository_root("demo")
+        };
+        assert_eq!(merge.first_parent(), Some(first));
+        assert_ne!(merge.first_parent(), Some(second));
+    }
 
     #[test]
     fn displays_dates_in_their_own_offset() {
