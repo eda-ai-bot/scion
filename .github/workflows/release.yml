@@ -11,7 +11,8 @@
 # other three link Apple frameworks (Security, SystemConfiguration,
 # CoreFoundation) that exist only in Apple's SDK, and the server tier runs on
 # Linux anyway. The same run builds the scion-server image for linux/amd64 and
-# linux/arm64 from the static binaries and checks it serves; a tag pushes it to
+# linux/arm64 from the static binaries and checks it serves, alone and in the
+# production compose profile behind Caddy; a tag pushes it to
 # ghcr.io/<owner>/scion-server:<version>. The runners behave as the header of
 # ci.yml says.
 name: Release
@@ -21,7 +22,12 @@ on:
     tags: ["v*"]
   workflow_dispatch:
   pull_request:
-    paths: [".github/workflows/release.yml", "deploy/release.Dockerfile"]
+    paths:
+      - .github/workflows/release.yml
+      - deploy/release.Dockerfile
+      - deploy/compose.prod.yml
+      - deploy/Caddyfile
+      - scripts/prod-profile-test.sh
 
 concurrency:
   group: release-${{ github.ref }}
@@ -231,6 +237,20 @@ jobs:
           cd "$RUNNER_TEMP" && rm -rf clone && "$scn" clone "$grpc" image-smoke clone
           test -d clone
           echo "the image served the list page and a clone of image-smoke"
+      - name: the production profile lands through one https address
+        # The runner's Docker has no compose plugin; a pinned one, checked
+        # against its published sum, lives in this job's DOCKER_CONFIG only.
+        env:
+          COMPOSE: https://github.com/docker/compose/releases/download/v2.32.4/docker-compose-linux-x86_64
+          COMPOSE_SHA256: ed1917fb54db184192ea9d0717bcd59e3662ea79db48bff36d3475516c480a6b
+        run: |
+          export DOCKER_CONFIG="$RUNNER_TEMP/docker-compose-config"
+          mkdir -p "$DOCKER_CONFIG/cli-plugins"
+          curl -sfL -o "$DOCKER_CONFIG/cli-plugins/docker-compose" "$COMPOSE"
+          echo "$COMPOSE_SHA256  $DOCKER_CONFIG/cli-plugins/docker-compose" | sha256sum -c -
+          chmod 755 "$DOCKER_CONFIG/cli-plugins/docker-compose"
+          docker compose version
+          sh scripts/prod-profile-test.sh "$VERSION" "$RUNNER_TEMP/scn"
       - name: push
         if: github.ref_type == 'tag'
         run: |
